@@ -1,0 +1,206 @@
+# ============================================================
+# .htaccess untuk RA Attakal Yaqiin
+# Apache URL Rewriting, Keamanan, dan Optimasi
+# ============================================================
+
+# ============================================================
+# 1. URL Rewriting - Arahkan semua request ke index.php
+# ============================================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Jika aplikasi berada di subdirectory, sesuaikan RewriteBase
+    # RewriteBase /RAAY/
+
+    # Paksa HTTPS (aktifkan jika sudah punya SSL)
+    # RewriteCond %{HTTPS} !=on
+    # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Hapus trailing slash (kecuali root)
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Jangan rewrite untuk file/folder yang benar-benar ada
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Arahkan semua request ke index.php
+    RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
+
+# ============================================================
+# 2. Keamanan - Blokir akses ke folder sensitif
+# ============================================================
+
+# Blokir akses langsung ke folder config, models, views, dan database
+<IfModule mod_rewrite.c>
+    RewriteRule ^config/ - [F,L]
+    RewriteRule ^models/ - [F,L]
+    RewriteRule ^views/ - [F,L]
+    RewriteRule ^database/ - [F,L]
+    RewriteRule ^controllers/ - [F,L]
+    RewriteRule ^storage/ - [F,L]
+</IfModule>
+
+# Blokir akses ke file tersembunyi (.env, .git, dll)
+<IfModule mod_rewrite.c>
+    RewriteRule (^\.|/\.) - [F,L]
+</IfModule>
+
+# Blokir akses ke file sensitif tertentu
+<FilesMatch "\.(env|log|sql|bak|old|tmp|swp)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order Allow,Deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Sembunyikan versi Apache
+ServerSignature Off
+
+# ============================================================
+# 3. Security Headers
+# ============================================================
+<IfModule mod_headers.c>
+    # Cegah clickjacking
+    Header always set X-Frame-Options "SAMEORIGIN"
+
+    # Cegah MIME type sniffing
+    Header always set X-Content-Type-Options "nosniff"
+
+    # Aktifkan XSS filter browser
+    Header always set X-XSS-Protection "1; mode=block"
+
+    # Referrer policy
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # Permissions Policy (batasi akses ke fitur browser)
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
+
+    # Hapus header X-Powered-By
+    Header always unset X-Powered-By
+</IfModule>
+
+# ============================================================
+# 4. Kompresi GZIP
+# ============================================================
+<IfModule mod_deflate.c>
+    # Kompresi untuk teks
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE text/javascript
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/json
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/atom+xml
+    AddOutputFilterByType DEFLATE image/svg+xml
+    AddOutputFilterByType DEFLATE font/ttf
+    AddOutputFilterByType DEFLATE font/otf
+    AddOutputFilterByType DEFLATE font/woff
+    AddOutputFilterByType DEFLATE font/woff2
+</IfModule>
+
+# ============================================================
+# 5. Caching untuk Aset Statis
+# ============================================================
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    # Default cache 1 bulan
+    ExpiresDefault "access plus 1 month"
+
+    # HTML - tidak di-cache (konten dinamis)
+    ExpiresByType text/html "access plus 0 seconds"
+
+    # CSS dan JavaScript - cache 1 tahun (cache busting via ?v=)
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType text/javascript "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType application/x-javascript "access plus 1 year"
+
+    # Gambar - cache 1 bulan
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/x-icon "access plus 1 year"
+
+    # Font - cache 1 tahun
+    ExpiresByType font/ttf "access plus 1 year"
+    ExpiresByType font/otf "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType application/font-woff "access plus 1 year"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+
+    # XML dan JSON - tidak di-cache
+    ExpiresByType application/json "access plus 0 seconds"
+    ExpiresByType application/xml "access plus 0 seconds"
+    ExpiresByType text/xml "access plus 0 seconds"
+</IfModule>
+
+# Cache-Control headers
+<IfModule mod_headers.c>
+    # Aset statis - cache agresif
+    <FilesMatch "\.(css|js|jpg|jpeg|png|gif|webp|svg|ico|woff|woff2|ttf|otf)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+
+    # HTML dan PHP - jangan cache
+    <FilesMatch "\.(html|php)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires 0
+    </FilesMatch>
+</IfModule>
+
+# ============================================================
+# 6. MIME Types
+# ============================================================
+<IfModule mod_mime.c>
+    AddType application/font-woff .woff
+    AddType application/font-woff2 .woff2
+    AddType image/webp .webp
+    AddType image/svg+xml .svg
+    AddType application/json .json
+</IfModule>
+
+# ============================================================
+# 7. PHP Settings (jika diizinkan oleh hosting)
+# ============================================================
+<IfModule mod_php.c>
+    # Batas upload file
+    php_value upload_max_filesize 10M
+    php_value post_max_size 12M
+
+    # Timezone
+    php_value date.timezone "Asia/Jakarta"
+
+    # Keamanan session
+    php_flag session.cookie_httponly On
+    php_flag session.use_only_cookies On
+    php_flag session.use_strict_mode On
+
+    # Sembunyikan PHP version
+    php_flag expose_php Off
+</IfModule>
+
+# ============================================================
+# 8. Mencegah Directory Listing
+# ============================================================
+Options -Indexes
+
+# ============================================================
+# 9. Karakter Encoding Default
+# ============================================================
+AddDefaultCharset UTF-8

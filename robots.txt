@@ -1,0 +1,25 @@
+# ============================================================
+# robots.txt - RA Attakal Yaqiin
+# https://raattakalyaqiin.com/robots.txt
+# ============================================================
+
+# Izinkan semua crawler mengakses situs
+User-agent: *
+Allow: /
+
+# Halaman yang tidak boleh di-crawl
+Disallow: /admin/
+Disallow: /config/
+Disallow: /models/
+Disallow: /views/
+Disallow: /controllers/
+Disallow: /database/
+Disallow: /storage/
+
+# File yang tidak boleh di-crawl
+Disallow: /*.sql$
+Disallow: /*.log$
+Disallow: /*.env$
+
+# Referensi Sitemap
+Sitemap: https://raattakalyaqiin.com/sitemap.xml
